@@ -24,4 +24,32 @@ program
     await $`jj new --message "working tree"`;
   });
 
+program
+  .command("add")
+  .description("Add file contents to the index")
+  .argument("[<pathspec>...]", "Files to add content from.")
+  .action(async (files: string[]) => {
+    // Move the specified files from the working tree to the index
+    await $`jj squash --keep-emptied ${files.join(" ")}`;
+  });
+
+program
+  .command("commit")
+  .description("Record changes to the repository")
+  .option("-m, --message <msg>", "Use the given <msg> as the commit message.")
+  .action(async (options: { message?: string }) => {
+    // Check if the index is empty
+    const diff = await $`jj diff --revisions @-`;
+    if (diff.stdout.trim() === "") {
+      console.log("There are no staged changes to commit");
+      return;
+    }
+
+    // Convert the index into the new commit
+    await $`jj describe @- --message ${options.message ?? ""}`;
+
+    // Create a new empty index
+    await $`jj new --insert-before @ --message "index" --no-edit`;
+  });
+
 await program.parseAsync();
