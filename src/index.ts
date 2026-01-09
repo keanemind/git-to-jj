@@ -72,4 +72,38 @@ program
     },
   );
 
+program
+  .command("switch")
+  .description("Switch branches")
+  .argument("<branch>", "The branch to switch to.")
+  .action(async (branch: string) => {
+    // Keep track of the current operation in case we need to revert
+    const startingOperationId = (
+      await $`jj operation show --template "self.id()" --no-op-diff`
+    ).stdout.trim();
+
+    // Move both the index and working tree to the new branch
+    await $`jj rebase --source @- --destination ${branch}`;
+
+    // Check if there are any conflicts in the index or working tree.
+    // Note that if there is a conflict in the index, there will also
+    // be a conflict in the working tree, because the working tree is
+    // a descendant of the index.
+    const isConflicted =
+      (
+        await $`jj log --revisions @ --template "self.conflict()" --no-graph`
+      ).stdout.trim() === "true";
+
+    if (isConflicted) {
+      // Revert our rebase
+      await $`jj operation restore ${startingOperationId}`;
+
+      // TODO: implement "Your local changes to the following files would be overwritten..."
+
+      throw new Error(
+        "Please commit your changes or stash them before you switch branches.",
+      );
+    }
+  });
+
 await program.parseAsync();
