@@ -19,6 +19,9 @@ program
   .action(async (directory: string | undefined) => {
     await $`jj git init --no-colocate ${directory ?? ""}`;
 
+    // Create main branch
+    await $`jj bookmark create main`;
+
     // Set up index and working tree
     await $`jj describe --message "index"`;
     await $`jj new --message "working tree"`;
@@ -51,5 +54,22 @@ program
     // Create a new empty index
     await $`jj new --insert-before @ --message "index" --no-edit`;
   });
+
+program
+  .command("branch")
+  .description("List, create, or delete branches")
+  .argument("[<branchname>]", "The name of the branch to create.")
+  .option("-d, --delete <branchname>", "Delete the branch <branch>.")
+  .action(
+    async (branchname: string | undefined, options: { delete?: string }) => {
+      if (branchname) {
+        await $`jj bookmark create ${branchname}`;
+      } else if (options.delete) {
+        await $`jj bookmark delete ${options.delete}`;
+      } else {
+        await $`jj bookmark list`;
+      }
+    },
+  );
 
 await program.parseAsync();
